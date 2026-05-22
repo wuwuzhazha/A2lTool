@@ -19,6 +19,7 @@ mod symbol;
 mod update;
 mod version;
 mod xcp;
+mod yaml;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum A2lVersion {
@@ -130,6 +131,20 @@ fn core(args: impl Iterator<Item = OsString>) -> Result<(), String> {
         now,
         format!("\na2ltool {}\n", env!("CARGO_PKG_VERSION"))
     );
+
+    // Handle --yaml-example: write example YAML and exit
+    if let Some(true) = arg_matches.get_one::<bool>("YAML_EXAMPLE") {
+        let yaml_content = yaml::generate_yaml_example();
+        if let Some(out_filename) = arg_matches.get_one::<OsString>("OUTPUT") {
+            std::fs::write(out_filename, yaml_content)
+                .map_err(|e| format!("Failed to write YAML example to \"{}\": {e}", out_filename.to_string_lossy()))?;
+            cond_print!(verbose, now, format!("YAML example written to \"{}\"", out_filename.to_string_lossy()));
+        } else {
+            print!("{yaml_content}");
+        }
+        cond_print!(verbose, now, "\nRun complete. Have a nice day!\n\n");
+        return Ok(());
+    }
 
     // load input
     let (input_filename, mut a2l_file) = load_or_create_a2l(&arg_matches, strict, verbose, now)?;
@@ -660,6 +675,20 @@ fn load_or_create_a2l(
             format!("Input \"{}\" loaded", input_filename.to_string_lossy())
         );
         Ok((input_filename, a2l_file))
+    } else if let Some(yaml_path) = arg_matches.get_one::<OsString>("FROM_YAML") {
+        let input_filename = yaml_path.as_os_str();
+        cond_print!(
+            verbose,
+            now,
+            format!("Loading YAML config from \"{}\"", yaml_path.to_string_lossy())
+        );
+        let a2l_file = yaml::load_yaml_to_a2l(&yaml_path.to_string_lossy())?;
+        cond_print!(
+            verbose,
+            now,
+            format!("YAML config loaded from \"{}\"", yaml_path.to_string_lossy())
+        );
+        Ok((input_filename, a2l_file))
     } else if arg_matches.contains_id("CREATE") {
         // dummy file name
         let input_filename = OsStr::new("<newly created>");
@@ -681,8 +710,8 @@ fn load_or_create_a2l(
         a2l_file.asap2_version = Some(a2lfile::Asap2Version::new(1, 71));
         Ok((input_filename, a2l_file))
     } else {
-        // shouldn't be able to get here, the clap config requires either INPUT or CREATE
-        Err("impossible: no input filename and no --create".to_string())
+        // shouldn't be able to get here, the clap config requires either INPUT, CREATE or FROM_YAML
+        Err("impossible: no input filename, no --create, and no --from-yaml".to_string())
     }
 }
 
@@ -705,6 +734,19 @@ fn parse_args(args: impl Iterator<Item = OsString>) -> ArgMatches {
     .arg(Arg::new("CREATE")
         .help("Create a new A2L file instead of loading an existing one")
         .long("create")
+        .number_of_values(0)
+        .action(clap::ArgAction::SetTrue)
+    )
+    .arg(Arg::new("FROM_YAML")
+        .help("Generate an A2L file from a YAML configuration file")
+        .long("from-yaml")
+        .number_of_values(1)
+        .value_name("YAML_FILE")
+        .value_parser(ValueParser::os_string())
+    )
+    .arg(Arg::new("YAML_EXAMPLE")
+        .help("Generate a comprehensive YAML configuration example file")
+        .long("yaml-example")
         .number_of_values(0)
         .action(clap::ArgAction::SetTrue)
     )
@@ -996,7 +1038,7 @@ The arg --update must be present.")
     )
     .group(
         ArgGroup::new("INPUT_ARGGROUP")
-            .args(["INPUT", "CREATE"])
+            .args(["INPUT", "CREATE", "FROM_YAML", "YAML_EXAMPLE"])
             .multiple(false)
             .required(true)
     )

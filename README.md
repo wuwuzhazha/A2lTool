@@ -1,92 +1,89 @@
-# a2ltool
+# A2LTool
 
-[![Github Actions](https://github.com/DanielT/a2ltool/actions/workflows/CI.yml/badge.svg)](https://github.com/DanielT/a2ltool/actions)
+A tool to edit, merge, update and **generate** A2L (ASAP2) files.
 
-A tool to edit, merge and update a2l files
+基于 [DanielT/a2ltool](https://github.com/DanielT/a2ltool) v3.2.2 二次开发，新增 YAML 配置支持。
 
-## Features of a2ltool
+---
 
-- update the addresses of measurement variables and tunable parameters (characteristics) based on the elf file containing the compiled embedded application
-- merge multiple a2l files into a single file
-- add new measurements or characteristics based on the elf file
-- check a2l files for consistency
-- display XCP connection parameters embedded in the a2l file, if any exist
-- maintain the formatting and ordering of items in the a2l file during manipulation, so that the diff between the original and the updated/modified file is as small as possible
-- Supports files up to a2l version 1.71 (current)
+**作者**: Wanghaitao | **邮箱**: wht_0117@163.com
 
-## Installation
+**开始时间**: 2026-05-22 | **版本**: 1.0.0
 
-a2ltool binaries are available on the [releases page](https://github.com/DanielT/a2ltool/releases).
-You can get pre-built binaries for Windows (x64) and Linux (x64) there.
+---
 
-For any other platform you can compile a2ltool using `cargo build --release`.
+## Features
 
-## Usage
+- 从 YAML 配置文件生成 A2L 文件 (`--from-yaml`)
+- 生成 YAML 配置示例模板 (`--yaml-example`)
+- 支持 GROUP `root` / `sub_groups` 层级结构
+- 完整的 TAB_VERB / TAB_NOINTP 查表类型支持
+- 基于 ELF/PDB 文件更新观测量和标定量的地址
+- 合并多个 A2L 文件为单个文件
+- 从 ELF 文件添加新的观测量或标定量
+- 一致性检查 (`--check`)
+- 显示 A2L 文件中嵌入的 XCP 连接参数
+- 维护 A2L 文件中项目的格式和顺序，使原始文件与更新/修改文件之间的差异尽可能小
+- 支持 A2L 版本 1.71（最新）
 
-Refer to [the manual](https://danielt.github.io/a2ltool/) for a detailed description of the features and options of a2ltool.
+## 安装
 
-## Examples
+### 从源码编译
 
-The following examples show how to use a2ltool for common use cases:
+```bash
+cargo build --release
+```
 
-#### Merge two A2L files
+编译后的二进制文件位于 `target/release/a2ltool.exe`。
 
-`a2ltool file1.a2l --merge file2.a2l --output merged.a2l`
+## 用法
 
-#### Merge multiple A2L files
+### 从 YAML 配置生成 A2L 文件
 
-`a2ltool file1.a2l --merge file2.a2l --merge file3.a2l --merge file4.a2l --output merged.a2l`
+```bash
+# 从 YAML 配置文件生成 A2L 文件并进行一致性检查和排序
+a2ltool --from-yaml config.yaml --check --sort -o output.a2l
 
-#### Merge all included files into the main file
+# 生成一份完整的 YAML 配置示例模板
+a2ltool --yaml-example -o example.yaml
+```
 
-`a2ltool file1.a2l --merge-includes --output flat.a2l`
+详细的 YAML 配置说明请参考 [A2L_YAML_CONFIG_SPEC.md](A2L_YAML_CONFIG_SPEC.md)。
 
-#### Update the addresses and other data in an A2L file
+### 合并 A2L 文件
 
-`a2ltool input.a2l --elffile input.elf --update --output updated.a2l`
+```bash
+a2ltool file1.a2l --merge file2.a2l -o merged.a2l
+```
 
-#### Update the addresses and other data in an A2L file, while keeping invalid elements
+### 更新 A2L 文件中的地址
 
-`a2ltool input.a2l --elffile input.elf --update --update-mode PRESERVE --output updated.a2l`
+```bash
+a2ltool input.a2l --elffile firmware.elf --update -o updated.a2l
+```
 
-#### Update only the addresses in an A2L file, and exit with an error if any other A2L elements are incorrect
+### 创建新的 A2L 文件
 
-`a2ltool input.a2l --elffile input.elf --update ADDRESSES --update-mode STRICT --output updated.a2l`
+```bash
+a2ltool --create -o newfile.a2l
+```
 
-#### Create a new A2L file and add a characteristic from an ELF file to it
+### 一致性检查
 
-`a2ltool --create --elffile input.elf --characteristic my_var --output newfile.a2l`
+```bash
+a2ltool input.a2l --check --strict
+```
 
-#### Create a new A2L file and add multiple measurements from an ELF file to it using a regular expression
+更多详细用法请运行 `a2ltool --help`。
 
-`a2ltool --create --elffile input.elf --measurement-regex ".*name_pattern\d\d+*" --output newfile.a2l`
+## 关于 A2L 文件
 
-#### Create a new A2L file and add multiple measurements from an ELF file to it using an address range
+A2L 文件描述了嵌入式设备（通常是汽车 ECU）的测量变量和可调参数。
 
-`a2ltool --create --elffile input.elf --measurement-range 0x1000 0x3000 --output newfile.a2l`
+A2L 文件的消费者通常允许通过 XCP 等协议进行在线标定和/或通过生成可刷写的参数集进行离线调校。市面上有多种商业工具可用于此目的。
 
-### Change the version of an A2L file, while deleting any incompatible elements
-
-`a2ltool input.a2l --a2lversion 1.5.1 --output downgraded.a2l`
-
-#### Check an A2L file for consistency
-
-`a2ltool input.a2l --check --strict`
-
-#### Use response files containing command arguments
-
-Assume that the file `a2ltool.rsp` exists and contains valid arguments for `a2ltool`.
-
-`a2ltool @a2ltool.rsp`
-
-## About A2L Files
-
-A2L files describe measurement variables and tunable parameters of an embedded device (typically, an automotive ECU).
-
-The consumer of the A2L file typically allows online calibration over a protocol such as XCP and/or offline tuning by generating flashable parameter sets. Several commercial tools are available for this purpose.
-
-The A2L file format is specified by ASAM and is formally called ASAM MCD-2 MC.
+A2L 文件格式由 ASAM 制定，正式名称为 ASAM MCD-2 MC。
 
 ## License
 
-a2ltool is dual-licensed under the [MIT](LICENSE-MIT) and [Apache2](LICENSE-APACHE) licenses.
+Licensed under either of [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE) at your option.

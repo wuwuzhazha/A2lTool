@@ -1,8 +1,9 @@
 [package]
 name = "a2ltool"
-version = "3.2.2"
-authors = ["Daniel Thaler <daniel@dthaler.de>"]
+version = "1.0.0"
+authors = ["Wanghaitao <wht_0117@163.com>"]
 edition = "2024"
+description = "A tool to edit, merge, update and generate A2L (ASAP2) files"
 license = "MIT OR Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -21,6 +22,8 @@ argfile = { version ="1.0", features=["response"]}
 pdb2 = "0.10"
 memchr = "2.7.5"
 num-traits = "0.2.19"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
 glob = "0.3.3"
 
 [dev-dependencies]
